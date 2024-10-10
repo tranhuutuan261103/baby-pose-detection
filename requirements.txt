@@ -1,0 +1,9 @@
+opencv-python==4.10.0
+mediapipe==0.10.14
+seaborn==0.13.2
+scikit-learn==1.5.1
+xgboost==2.1.1
+tqdm==4.66.5
+ultralytics==8.2.87
+roboflow==1.1.44
+pickleshare==0.7.5

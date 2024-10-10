@@ -1,0 +1,12 @@
+names:
+- infants
+nc: 1
+roboflow:
+  license: CC BY 4.0
+  project: infant-detection
+  url: https://universe.roboflow.com/learning-ai-kyix0/infant-detection/dataset/1
+  version: 1
+  workspace: learning-ai-kyix0
+test: ../test/images
+train: ../train/images
+val: ../valid/images
