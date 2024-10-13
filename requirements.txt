@@ -7,3 +7,5 @@ tqdm==4.66.5
 ultralytics==8.2.87
 roboflow==1.1.44
 pickleshare==0.7.5
+flask==3.0.3
+flask_cors==5.0.0
