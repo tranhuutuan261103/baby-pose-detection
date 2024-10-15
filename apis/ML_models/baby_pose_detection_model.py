@@ -5,14 +5,16 @@ import cv2
 import copy
 import pandas as pd
 import numpy as np
-from ML_models.image_preprocessing import ImagePreprocessing
 from PIL import Image
+
+from ML_models.pose_rotation_helper import PoseRotationHelper
+from ML_models.pose_scaler_helper import PoseScalerHelper
 
 class BabyPoseDetectionModel:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
-        self.image_preprocessing = ImagePreprocessing()
-        self.model = self.load_model(f"{os.path.dirname(os.path.realpath(__file__))}\\random_forest.pkl")
+        self.model = self.load_model(f"{os.path.dirname(os.path.realpath(__file__))}\\svc.pkl")
+        self.input_scaler = self.load_model(f"{os.path.dirname(os.path.realpath(__file__))}\\input_scaler.pkl")
         self.IMPORTANT_LMS = [
             "nose",
             "left_shoulder",
@@ -30,6 +32,8 @@ class BabyPoseDetectionModel:
             "left_foot_index",
             "right_foot_index",
         ]
+        self.pose_rotation_helper = PoseRotationHelper()
+        self.pose_scaler_helper = PoseScalerHelper(self.IMPORTANT_LMS)
 
     def load_model(self, file_name):
         with open(file_name, "rb") as file:
@@ -93,7 +97,7 @@ class BabyPoseDetectionModel:
             min_detection_confidence=0.5, min_tracking_confidence=0.5
         ) as pose:
             
-            image, new_size = self.square_for_image(image)
+            image, new_size = self.process_image(image)
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             results = pose.process(image)
@@ -109,19 +113,22 @@ class BabyPoseDetectionModel:
 
             # Get landmarks
             try:
-                print(f"Initial landmarks:")
-                results.pose_landmarks = self.rotate_keypoints(results.pose_landmarks, new_size)
-                print(f"Rotated landmarks:")
-                key_points = self.extract_and_recalculate_landmarks(
-                    results.pose_landmarks.landmark
-                )
-                print(f"Key points: {key_points}")
-                # X = pd.DataFrame([key_points], columns=self.HEADERS[1:])
-                # X = self.input_scaler.transform(X)
+                results.pose_landmarks = self.pose_rotation_helper.rotate_keypoints(results.pose_landmarks, new_size)
 
-                # print(f"X: {X}")
+                # draw_landmarks(mp_drawing, mp_pose, image, results.pose_landmarks)
 
-                predicted_class = self.model.predict(key_points)[0]
+                key_points_df = self.pose_scaler_helper.extract_and_recalculate_landmarks(results.pose_landmarks.landmark)
+
+                # Convert DataFrame to numpy array
+                key_points = key_points_df.values.reshape(1, -1)  # Chuyển DataFrame thành mảng 2D với đúng kích thước
+
+                # Scale input trước khi dự đoán
+                X = self.input_scaler.transform(key_points)
+
+                print(f"Input shape: {X}")
+
+                # Dự đoán
+                predicted_class = self.model.predict(X)[0]  # Dự đoán dựa trên mô hình và input đã được scale
 
                 print(f"Predicted class: {predicted_class}")
 
@@ -130,94 +137,36 @@ class BabyPoseDetectionModel:
             except Exception as e:
                 print(f"Error: {e}")
                 return "Prediction failed"
-            
-
-    def rotate_keypoints(self, keypoints, origin_size = (612, 408)) -> np.array:
-        left_shoulder = keypoints.landmark[11]
-        right_shoulder = keypoints.landmark[12]
-        left_hip = keypoints.landmark[23]
-        right_hip = keypoints.landmark[24]
-
-        center_shoulder = (left_shoulder.x + right_shoulder.x) / 2, (left_shoulder.y + right_shoulder.y) / 2
-        center_hip = (left_hip.x + right_hip.x) / 2, (left_hip.y + right_hip.y) / 2
-
-        center = (center_shoulder[0] + center_hip[0]) / 2, (center_shoulder[1] + center_hip[1]) / 2
-
-        O_center_shoulder = (center_shoulder[0] - center[0], center_shoulder[1] - center[1])
-        Oy = (0, -1)
-
-        theta = self.calculate_phase_difference(O_center_shoulder, Oy)
-
-        # rotate each key point
-        for point in keypoints.landmark:
-            point_rotated = self.rotate_point((point.x, point.y), center, theta, origin_size)
-            point.x = point_rotated[0]
-            point.y = point_rotated[1]
-
-        return keypoints
     
-    def square_for_image(self, original_image):
-        # Convert OpenCV image (BGR) to PIL image (RGB)
-        original_image_pil = Image.fromarray(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+    def square_for_image(self, image: np.array):
+        # Nếu hình ảnh là một đối tượng NumPy (cv2 image)
+        if isinstance(image, np.ndarray):
+            # Chuyển đổi từ định dạng cv2 (NumPy array) sang PIL image để xử lý
+            image_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        else:
+            # Nếu hình ảnh đã ở định dạng PIL thì không cần chuyển đổi
+            image_pil = image
 
-        # Get original image size (width, height)
-        original_size = original_image_pil.size
+        # Lấy kích thước ảnh gốc
+        original_size = image_pil.size
 
-        # Find the largest dimension to make the image square
-        max_size = max(original_size)
+        # Kích thước mới sẽ là kích thước lớn nhất giữa chiều rộng và chiều cao
+        max_width = max(original_size)
+        new_size = (max_width, max_width)
 
-        # Create a new square image with black background
-        new_image = Image.new("RGB", (max_size, max_size), (0, 0, 0))
+        # Tạo một ảnh mới với nền đen (kích thước vuông)
+        new_image = Image.new("RGB", new_size, (0, 0, 0))
 
-        # Calculate the position to paste the original image (centered)
-        paste_position = ((max_size - original_size[0]) // 2, (max_size - original_size[1]) // 2)
+        # Dán ảnh gốc vào ảnh mới với khoảng trống màu đen
+        new_image.paste(image_pil, 
+                        ((max_width - original_size[0]) // 2, (max_width - original_size[1]) // 2))
 
-        # Paste the original image onto the new black square
-        new_image.paste(original_image_pil, paste_position)
-
-        # Convert back to OpenCV format (BGR)
+        # Chuyển ảnh mới từ định dạng PIL sang định dạng NumPy (cv2)
         new_image_cv2 = cv2.cvtColor(np.array(new_image), cv2.COLOR_RGB2BGR)
 
-        return new_image_cv2, (max_size, max_size)
-    
-    def calculate_phase_difference(self, OA: tuple, OB: tuple) -> float:
-        """
-        Calculate the phase difference (in degrees) of vector OB relative to vector OA.
-        :param OA: A tuple representing the first vector (OA).
-        :param OB: A tuple representing the second vector (OB).
-        :return: Phase difference in degrees from 0 to 360.
-        """
-        # Calculate the dot product and magnitudes
-        dot_product = OA[0] * OB[0] + OA[1] * OB[1]
-        norm_OA = np.sqrt(OA[0] ** 2 + OA[1] ** 2)
-        norm_OB = np.sqrt(OB[0] ** 2 + OB[1] ** 2)
+        return new_image_cv2, new_size
 
-        # Calculate the cosine of the angle
-        cos_theta = dot_product / (norm_OA * norm_OB)
-        
-        # Ensure the value is within the valid range for arccos due to floating-point errors
-        cos_theta = np.clip(cos_theta, -1, 1)
-        
-        # Calculate the angle in radians
-        theta = np.arccos(cos_theta)
-        
-        # Calculate the cross product (only the z-component for 2D vectors)
-        cross_product = OA[0] * OB[1] - OA[1] * OB[0]
-        
-        # Adjust the angle based on the direction
-        if cross_product < 0:
-            theta = 2 * np.pi - theta
-
-        # Convert the angle to degrees
-        theta_degrees = np.degrees(theta)
-
-        return theta_degrees
-    
-    def rotate_point(self, point: tuple, center: tuple, angle: float, origin_size = (612, 408)) -> tuple:
-        x, y = point
-        cx, cy = center
-
-        x_new = (x - cx) * np.cos(np.radians(angle)) * origin_size[0] - (y - cy) * np.sin(np.radians(angle)) * origin_size[1] + cx * origin_size[0]
-        y_new = (x - cx) * np.sin(np.radians(angle)) * origin_size[0] + (y - cy) * np.cos(np.radians(angle)) * origin_size[1] + cy * origin_size[1]
-
-        return x_new / origin_size[0], y_new / origin_size[1]
+    def process_image(self, image):
+        """Load and pre-process the image."""
+        image, new_size = self.square_for_image(image)
+        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB), new_size
