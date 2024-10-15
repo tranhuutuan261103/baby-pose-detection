@@ -15,3 +15,8 @@ def save_model(model, file_name: str):
 
     with open(file_name, "wb") as file:
         pickle.dump(model, file)
+
+def load_model(file_name: str):
+    with open(file_name, "rb") as file:
+        model = pickle.load(file)
+        return model
