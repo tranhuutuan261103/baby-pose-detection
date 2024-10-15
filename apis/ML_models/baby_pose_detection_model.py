@@ -7,14 +7,15 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 
-from ML_models.pose_rotation_helper import PoseRotationHelper
-from ML_models.pose_scaler_helper import PoseScalerHelper
+from ML_models.utils.pose_rotation_helper import PoseRotationHelper
+from ML_models.utils.pose_scaler_helper import PoseScalerHelper
 
 class BabyPoseDetectionModel:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
-        self.model = self.load_model(f"{os.path.dirname(os.path.realpath(__file__))}\\svc.pkl")
-        self.input_scaler = self.load_model(f"{os.path.dirname(os.path.realpath(__file__))}\\input_scaler.pkl")
+        self.current_path = os.path.dirname(os.path.realpath(__file__))
+        self.model = self.load_model(f"{self.current_path}\\best_models\\svc.pkl")
+        self.input_scaler = self.load_model(f"{self.current_path}\\best_models\\input_scaler.pkl")
         self.IMPORTANT_LMS = [
             "nose",
             "left_shoulder",
