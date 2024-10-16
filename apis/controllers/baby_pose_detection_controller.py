@@ -35,10 +35,9 @@ def predict_baby_pose_detection():
 
         # Call the model's prediction function
         result = BabyPoseDetectionService().predict(image)
-        return jsonify({"result": result})
+        return jsonify(result)
 
     except Exception as e:
         # Log the actual error for debugging
         print(f"Exception: {str(e)}")
         return jsonify({"message": "An error occurred", "error": str(e)}), 500
-

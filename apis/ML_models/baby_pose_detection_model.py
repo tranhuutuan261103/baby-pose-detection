@@ -91,9 +91,7 @@ class BabyPoseDetectionModel:
 
         return df_key_points
     
-    def predict(self, image, prediction_probability_threshold=0.5) -> str:
-        current_class = "Unknown"
-
+    def predict(self, image, prediction_probability_threshold=0.5) -> int:
         with self.mp_pose.Pose(
             static_image_mode=True, model_complexity=1, smooth_landmarks=True
         ) as pose:
@@ -102,9 +100,8 @@ class BabyPoseDetectionModel:
             results = pose.process(image)
 
             if not results.pose_landmarks:
-                return "No human found"
+                raise Exception("No pose landmarks detected")
 
-            initial_pose_landmarks = copy.deepcopy(results.pose_landmarks)
             image.flags.writeable = True
 
             # Cần khôi phục lại màu gốc của ảnh
@@ -124,18 +121,12 @@ class BabyPoseDetectionModel:
                 # Scale input trước khi dự đoán
                 X = self.input_scaler.transform(key_points)
 
-                print(f"Input shape: {X}")
-
                 # Dự đoán
                 predicted_class = self.model.predict(X)[0]  # Dự đoán dựa trên mô hình và input đã được scale
 
-                print(f"Predicted class: {predicted_class}")
-
-                return str(predicted_class)
-
+                return int(predicted_class)
             except Exception as e:
-                print(f"Error: {e}")
-                return "Prediction failed"
+                raise Exception(f"Error when predicting: {e}")
     
     def square_for_image(self, image: np.array):
         # Nếu hình ảnh là một đối tượng NumPy (cv2 image)
