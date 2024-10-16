@@ -20,7 +20,7 @@ class PoseScalerHelper:
         df_key_points = pd.DataFrame([columns_value], columns=columns_name)
 
         center = self.find_center_of_mass(df_key_points)
-        shifting = (0.5 - center[0], 0.5 - center[1])
+        shifting = (0 - center[0], 0 - center[1])
 
         for landmark in self.IMPORTANT_LMS:
             df_key_points[f"{landmark}_x"] += shifting[0]
@@ -41,10 +41,13 @@ class PoseScalerHelper:
         # Find the center of the hips
         center_hip = ((left_hip[0] + right_hip[0]) / 2, (left_hip[1] + right_hip[1]) / 2)
 
-        # Get the nose coordinates
-        nose = (df_key_points["nose_x"], df_key_points["nose_y"])
+        # Get the sholder coordinates
+        left_shoulder = (df_key_points["left_shoulder_x"], df_key_points["left_shoulder_y"])
+        right_shoulder = (df_key_points["right_shoulder_x"], df_key_points["right_shoulder_y"])
 
-        return (center_hip[0] + nose[0]) / 2, (center_hip[1] + nose[1]) / 2
+        center_shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2, (left_shoulder[1] + right_shoulder[1]) / 2)
+
+        return (center_hip[0] + center_shoulder[0]) / 2, (center_hip[1] + center_shoulder[1]) / 2
 
     def calculate_scale_value(self, df_key_points):
         """Calculate the scale value based on nose and hip points."""
@@ -54,11 +57,14 @@ class PoseScalerHelper:
         # Find the center of the hips
         center_hip = ((left_hip[0] + right_hip[0]) / 2, (left_hip[1] + right_hip[1]) / 2)
 
-        # Get the nose coordinates
-        nose = (df_key_points["nose_x"], df_key_points["nose_y"])
+        # Get the sholder coordinates
+        left_shoulder = (df_key_points["left_shoulder_x"], df_key_points["left_shoulder_y"])
+        right_shoulder = (df_key_points["right_shoulder_x"], df_key_points["right_shoulder_y"])
+
+        center_shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2, (left_shoulder[1] + right_shoulder[1]) / 2)
 
         # Calculate the distance between nose and center of the hips
-        distance = np.sqrt((center_hip[0] - nose[0])**2 + (center_hip[1] - nose[1])**2)
+        distance = np.sqrt((center_hip[0] - center_shoulder[0])**2 + (center_hip[1] - center_shoulder[1])**2)
 
         # Scale value based on distance
         return 0.5 / distance
