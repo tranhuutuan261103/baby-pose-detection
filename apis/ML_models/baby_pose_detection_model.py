@@ -95,12 +95,10 @@ class BabyPoseDetectionModel:
         current_class = "Unknown"
 
         with self.mp_pose.Pose(
-            min_detection_confidence=0.5, min_tracking_confidence=0.5
+            static_image_mode=True, model_complexity=1, smooth_landmarks=True
         ) as pose:
             
             image, new_size = self.process_image(image)
-
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             results = pose.process(image)
 
             if not results.pose_landmarks:
