@@ -3,6 +3,7 @@ __pycache__
 
 data
 client/data_test
+.env
 
 yolov8n.pt
 yolov8s.pt
