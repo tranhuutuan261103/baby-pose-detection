@@ -2,6 +2,7 @@
 __pycache__
 
 data
+client/data_test
 
 yolov8n.pt
 yolov8s.pt
