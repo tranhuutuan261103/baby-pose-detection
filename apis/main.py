@@ -12,4 +12,4 @@ if __name__ == "__main__":
     app.register_blueprint(bpd_bp)
     app.register_blueprint(bsp_bp)
     app.register_blueprint(icc_bp)
-    app.run(debug=True, port=4656)
+    app.run(debug=True, host="0.0.0.0", port=4656)
