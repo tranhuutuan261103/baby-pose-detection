@@ -14,8 +14,8 @@ class BabyPoseDetectionModel:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
         self.current_path = os.path.dirname(os.path.realpath(__file__))
-        self.model = self.load_model(f"{self.current_path}\\best_models\\random_forest.pkl")
-        self.input_scaler = self.load_model(f"{self.current_path}\\best_models\\input_scaler.pkl")
+        self.model = self.load_model(os.path.join(self.current_path, "best_models", "random_forest.pkl"))
+        self.input_scaler = self.load_model(os.path.join(self.current_path, "best_models", "input_scaler.pkl"))
         self.IMPORTANT_LMS = [
             "nose",
             "left_shoulder",
