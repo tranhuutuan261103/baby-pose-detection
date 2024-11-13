@@ -27,4 +27,7 @@ class BabyPoseDetectionService:
                     "message_vn": "Trẻ đang nằm sấp"
                 }
         except Exception as e:
-            raise e
+            return {
+                "id": 3,
+                "message": str(e),
+            }

@@ -12,3 +12,4 @@ flask_cors==5.0.0
 pymongo==4.10.1
 pymongoarrow==1.6.0
 python-dotenv==1.0.1
+firebase_admin-6.6.0
