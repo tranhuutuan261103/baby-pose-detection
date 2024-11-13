@@ -2,6 +2,7 @@
 __pycache__
 
 data
+apis/media
 client/data_test
 .env
 
