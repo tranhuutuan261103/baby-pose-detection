@@ -2,7 +2,9 @@ from flask import Blueprint, jsonify, request
 import cv2
 import numpy as np
 from services.baby_pose_detection_service import BabyPoseDetectionService
+from services.baby_sleep_position_service import BabySleepPositionService
 from services.firebase_helper import get_account_info_by_code, send_notification_to_device
+import datetime
 
 bpd_bp = Blueprint("baby_pose_detection", __name__, url_prefix="/api/baby_pose_detection")
 
@@ -26,14 +28,17 @@ def predict_baby_pose_detection():
         image_file = request.files["image"]
         code = request.form["system_id"]
 
+        # Check if the file is empty
+        if image_file.filename == '':
+            return jsonify({"message": "No image selected for uploading"}), 400
+
         # Get account info by code
         account_info = get_account_info_by_code(code)
         if account_info is None:
             return jsonify({"message": "No account found with code"}), 400
-
-        # Check if the file is empty
-        if image_file.filename == '':
-            return jsonify({"message": "No image selected for uploading"}), 400
+        
+        babyPoseDetectionService = BabyPoseDetectionService()
+        babySleepPositionService = BabySleepPositionService()
 
         # Read and process the image file
         image_bytes = np.frombuffer(image_file.stream.read(), np.uint8)
@@ -44,12 +49,25 @@ def predict_baby_pose_detection():
             return jsonify({"message": "Image decoding failed"}), 400
 
         # Call the model's prediction function
-        result = BabyPoseDetectionService().predict(image)
+        result = babyPoseDetectionService.predict(image)
 
         if account_info["enableNotification"] == True and result["id"] == 2:
             # Send notification to user
             print("Sending notification to user...")
             send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Đã phát hiện trẻ em đang nằm xấp. Vui lòng kiểm tra.")
+
+        if result["id"] == 0 or result["id"] == 1:
+            # Insert sleep position data into MongoDB
+            babySleepPositionService.insert_sleep_position({
+                "userId": code,
+                "timestamp": datetime.datetime.now(),
+                "positionType": result["id"]
+            })
+
+            for item in babySleepPositionService.get_all_sleep_positions(code):
+                if item["positionType"] != result["id"]:
+                    print("Different position detected. Sending notification to user...")
+                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Đã phát hiện trẻ em đang nằm không đúng tư thế. Vui lòng kiểm tra.")
 
         return jsonify(result)
 

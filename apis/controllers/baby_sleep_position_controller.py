@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from datetime import datetime
+from datetime import datetime, timezone
 from services.baby_sleep_position_service import BabySleepPositionService
 
 bsp_bp = Blueprint("baby_sleep_position", __name__, url_prefix="/api/baby_sleep_position")
@@ -16,7 +16,8 @@ def get_all_sleep_positions():
 def insert_sleep_positions():
     try:
         data = request.get_json()
-        data["timestamp"] = datetime.strptime(data['timestamp'], "%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.now(timezone.utc)  # Lấy thời gian UTC hiện tại
+        data["timestamp"] = now
         BabySleepPositionService().insert_sleep_position(data)
         return jsonify({"message": "Data inserted successfully"})
     except Exception as e:

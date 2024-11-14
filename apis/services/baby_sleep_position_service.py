@@ -1,3 +1,5 @@
+import pymongo
+from datetime import datetime, timedelta, timezone
 from services.mongodb_helper import db
 
 class BabySleepPositionService:
@@ -18,6 +20,15 @@ class BabySleepPositionService:
                     "granularity": "seconds"
                 }
             )
+
+            db[self.collection_name].create_index(
+                [("timestamp", pymongo.ASCENDING)], 
+                expireAfterSeconds=180  # Dữ liệu sẽ bị xóa sau 180 giây
+            )
+
+            indexes = db[self.collection_name].list_indexes()
+            for index in indexes:
+                print(index)
             print("Time series collection created successfully.")
         except Exception as e:
             print("Collection creation failed (might already exist):", e)
@@ -29,16 +40,32 @@ class BabySleepPositionService:
         except Exception as e:
             print("Document insertion failed:", e)
     
-    def get_all_sleep_positions(self, userId: str):
-        # Retrieve all documents in the collection
+    def get_all_sleep_positions(self, userId: str, expireAfterSeconds: float=180):
+        # Tính toán thời gian hiện tại và thời gian cách đây 180 giây
+        now = datetime.now(timezone.utc)  # Lấy thời gian UTC hiện tại
+        time_threshold = now - timedelta(seconds=expireAfterSeconds)  # Tính thời gian ngưỡng
+
         try:
+            # Truy vấn MongoDB để lấy tất cả các tài liệu của userId có timestamp trong 180 giây qua
             documents = list(self.collection.find(
-                {"userId": userId},
+                {
+                    "userId": userId,
+                    "timestamp": {"$gte": time_threshold}  # Điều kiện: timestamp >= thời gian ngưỡng
+                }
             ))
-            # Convert ObjectId to string for each document
+
+            # Chuyển ObjectId thành chuỗi để dễ dàng sử dụng
             for doc in documents:
                 doc['_id'] = str(doc['_id'])
-            return documents
+
+            return documents  # Trả về các tài liệu phù hợp
         except Exception as e:
             print("Failed to retrieve documents:", e)
-            return []
+            return []  # Trả về danh sách rỗng nếu gặp lỗi
+        
+    def delete_all_sleep_positions_by_userId(self, userId: str):
+        try:
+            self.collection.delete_many({"userId": userId})
+            print("Documents deleted successfully.")
+        except Exception as e:
+            print("Document deletion failed:", e)
