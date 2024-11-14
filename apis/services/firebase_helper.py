@@ -58,4 +58,4 @@ title = "Thông báo từ hệ thống"
 body = "Đây là thông báo thử nghiệm đến thiết bị của bạn."
 
 # Gửi thông báo
-send_notification_to_device(device_token, title, body)
+# send_notification_to_device(device_token, title, body)
