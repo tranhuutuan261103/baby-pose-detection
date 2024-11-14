@@ -33,6 +33,27 @@ def get_account_info_by_code(code):
     except Exception as e:
         print(f"Exception: {str(e)}")
         return None
+    
+def get_account_info_by_id(account_id):
+    try:
+        # Reference to the specific account using its ID
+        account_ref = db.reference(f'accounts/{account_id}')
+        
+        # Get data for the specific account
+        account_data = account_ref.get()
+        
+        # Check if account data is found
+        if account_data:
+            for key, value in account_data.items():
+                if value.get('code') == account_id:
+                    return value
+            return None
+        else:
+            print("Account not found")
+            return None
+    except Exception as e:
+        print(f"Exception: {str(e)}")
+        return None
 
 # Hàm gửi thông báo FCM
 def send_notification_to_device(device_token, title, body):
