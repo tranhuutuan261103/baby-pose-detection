@@ -52,10 +52,10 @@ def send_notification_to_device(device_token, title, body):
     except Exception as e:
         print('Error sending message:', e)
 
-# # Thông tin thông báo và deviceToken
-# device_token = "ddXgPB0ZSR-mcpS1IGQKmR:APA91bG6Ohoyxu5Y1fCnTHlxjhD6okzZtrSBBSxZ_azF4FLFEQm67tQj5lDrPrqj6HATs15uToBAFNt3d7RXVDBlWQvCsbPE_C9PJHFHmFjxKbQ4L_7QdyE"
-# title = "Thông báo từ hệ thống"
-# body = "Đây là thông báo thử nghiệm đến thiết bị của bạn."
+# Thông tin thông báo và deviceToken
+device_token = "ddXgPB0ZSR-mcpS1IGQKmR:APA91bG6Ohoyxu5Y1fCnTHlxjhD6okzZtrSBBSxZ_azF4FLFEQm67tQj5lDrPrqj6HATs15uToBAFNt3d7RXVDBlWQvCsbPE_C9PJHFHmFjxKbQ4L_7QdyE"
+title = "Thông báo từ hệ thống"
+body = "Đây là thông báo thử nghiệm đến thiết bị của bạn."
 
-# # Gửi thông báo
-# send_notification_to_device(device_token, title, body)
+# Gửi thông báo
+send_notification_to_device(device_token, title, body)
