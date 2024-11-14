@@ -65,6 +65,8 @@ class InfantCryClassification:
                 features = self.extract_features(segment, sr)
                 X.append(features)
 
+            print(f"Number of segments: {len(X)}")
+
             # Dự đoán
             predictions = self.model.predict(X)
             return predictions
