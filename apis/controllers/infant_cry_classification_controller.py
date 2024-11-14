@@ -4,10 +4,12 @@ import numpy as np
 from datetime import datetime
 from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
 from services.infant_cry_classification_service import InfantCryClassificationService
+from services.firebase_helper import save_file_to_firestore, get_account_info_by_id, send_notification_to_device
+from services.utils import most_frequent_element
 
 import os
 
-audio_folder = "apis/media/audio/"
+audio_folder = "apis/media/audios/"
 if not os.path.exists(audio_folder):
     os.makedirs(audio_folder)
 
@@ -21,21 +23,44 @@ def predict_infant_cry():
         # Log request information for debugging
         if "audio" not in request.files:
             return jsonify({"message": "No audio part in the request"}), 400
+        
+        if "system_id" not in request.form:
+            return jsonify({"message": "No system_id part in the request"}), 400
 
         audio_file = request.files["audio"]
 
+        system_id = request.form["system_id"]
+
+        # Get account info by code
+        account_info = get_account_info_by_id(system_id)
+        if account_info is None:
+            return jsonify({"message": "No account found with code"}), 400
+
         # save file to disk
-        audio_file.save(os.path.join(audio_folder, audio_file.filename))
+        audio_file_name = f"{system_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.wav"
+        audio_file.save(os.path.join(audio_folder, audio_file_name))
+        save_file_to_firestore(os.path.join(audio_folder, audio_file_name), f"{system_id}_audio.wav")
 
         # Call the model's prediction function
-        result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file.filename))
+        result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file_name))
 
         if result == 1:
-            typ = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file.filename))
+            cry_classes = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
+            if len(cry_classes) == 0:
+                return jsonify(
+                    {
+                        "result": str(result),
+                        "type": "Không phát hiện tiếng khóc"
+                    }
+                )
+            
+            cry_class = most_frequent_element(cry_classes)
+            if account_info["enableNotification"] == True:
+                send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", f"{cry_class}")
             return jsonify(
                 {
                     "result": str(result),
-                    "type": str(typ)
+                    "type": str(cry_class)
                 }
             )
 

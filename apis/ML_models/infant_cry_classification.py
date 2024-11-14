@@ -11,7 +11,7 @@ class InfantCryClassification:
         self.current_path = os.path.dirname(os.path.realpath(__file__))
         self.model = joblib.load(os.path.join(self.current_path, "classify_bbcry", "classify_bbcry_RFmodel.pkl"))
 
-    def select_cry_frames_using_energy(self, signal: np.ndarray, frame_length, hop_length, thresh=0.05) -> list:
+    def select_cry_frames_using_energy(self, signal: np.ndarray, frame_length, hop_length, thresh=0.1) -> list:
         energy = np.array([
             sum(abs(signal[i:i+frame_length]**2))
             for i in range(0, len(signal), hop_length)
@@ -62,14 +62,12 @@ class InfantCryClassification:
             # Trích xuất đặc trưng cho từng segment
             for (start, end) in segments:
                 segment = signal[start * self.hop_length : end * self.hop_length]
-                features = self.extract_features(signal, sr)
+                features = self.extract_features(segment, sr)
                 X.append(features)
-
-            print(X)
 
             # Dự đoán
             predictions = self.model.predict(X)
             return predictions
         except Exception as e:
             print(f"Exception: {str(e)}")
-            return None
+            return []

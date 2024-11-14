@@ -1,12 +1,16 @@
 from flask import Blueprint, jsonify, request
 import cv2
+import os
 import numpy as np
 from services.baby_pose_detection_service import BabyPoseDetectionService
 from services.baby_sleep_position_service import BabySleepPositionService
-from services.firebase_helper import get_account_info_by_id, send_notification_to_device
+from services.firebase_helper import get_account_info_by_id, send_notification_to_device, save_file_to_firestore
 import datetime
 
 bpd_bp = Blueprint("baby_pose_detection", __name__, url_prefix="/api/baby_pose_detection")
+image_folder = "apis/media/images/"
+if not os.path.exists(image_folder):
+    os.makedirs(image_folder)
 
 @bpd_bp.route("", methods=["GET"])
 def get_baby_pose_detection():
@@ -47,6 +51,15 @@ def predict_baby_pose_detection():
         # Check if image was successfully decoded
         if image is None:
             return jsonify({"message": "Image decoding failed"}), 400
+        
+        # Đặt tên file tạm dựa trên ID và timestamp để tránh trùng lặp
+        temp_image_name = f"{code}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        cv2.imwrite(os.path.join(image_folder, temp_image_name), image)
+
+        # Tải ảnh lên Firebase từ file tạm
+        image_url = save_file_to_firestore(os.path.join(image_folder, temp_image_name), f"{code}_image.jpg")
+        if image_url is None:
+            print("Error saving image to Firestore")
 
         # Call the model's prediction function
         result = babyPoseDetectionService.predict(image)
