@@ -4,13 +4,18 @@ import os
 import numpy as np
 from services.baby_pose_detection_service import BabyPoseDetectionService
 from services.baby_sleep_position_service import BabySleepPositionService
+from services.baby_sleep_position_history_service import BabySleepPositionHistoryService
 from services.firebase_helper import get_account_info_by_id, send_notification_to_device, save_file_to_firestore
-import datetime
+from datetime import datetime, timedelta, timezone
 
 bpd_bp = Blueprint("baby_pose_detection", __name__, url_prefix="/api/baby_pose_detection")
 image_folder = "apis/media/images/"
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
+
+babyPoseDetectionService = BabyPoseDetectionService()
+babySleepPositionService = BabySleepPositionService()
+babySleepPositionHistoryService = BabySleepPositionHistoryService()
 
 @bpd_bp.route("", methods=["GET"])
 def get_baby_pose_detection():
@@ -40,9 +45,6 @@ def predict_baby_pose_detection():
         account_info = get_account_info_by_id(code)
         if account_info is None:
             return jsonify({"message": "No account found with code"}), 400
-        
-        babyPoseDetectionService = BabyPoseDetectionService()
-        babySleepPositionService = BabySleepPositionService()
 
         # Read and process the image file
         image_bytes = np.frombuffer(image_file.stream.read(), np.uint8)
@@ -77,10 +79,46 @@ def predict_baby_pose_detection():
                 "positionType": result["id"]
             })
 
-            for item in babySleepPositionService.get_all_sleep_positions(code):
-                if item["positionType"] != result["id"]:
-                    print("Different position detected. Sending notification to user...")
-                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Đã phát hiện trẻ em đang nằm không đúng tư thế. Vui lòng kiểm tra.")
+            lately_sleep_positions = babySleepPositionHistoryService.get_all_sleep_positions(code)
+
+            is_changed = True
+            if len(lately_sleep_positions) > 0:
+                for item in lately_sleep_positions:
+                    if item["positionType"] != result["id"]:
+                        is_changed = False
+
+                if is_changed:
+                    babySleepPositionHistoryService.insert_sleep_position({
+                        "userId": code,
+                        "timestamp": lately_sleep_positions[0]["timestamp"],
+                        "positionType": result["id"]
+                    })
+
+        if account_info["enableNotification"] == True:
+            lately_sleep_positions_history = babySleepPositionHistoryService.get_all_sleep_positions(code)
+            if len(lately_sleep_positions_history) > 0:
+                if lately_sleep_positions_history[0]["timestamp"] <= datetime.now(timezone.utc) - timedelta(minutes=account_info["schedule"]):
+                    # Calculate the time positionType = 0 and 1 in the last 30 minutes
+                    count_position_0 = 0 #s
+                    count_position_1 = 0 #s
+                    for i in range(len(lately_sleep_positions_history) - 1):
+                        if lately_sleep_positions_history[i]["positionType"] == 0:
+                            count_position_0 += (lately_sleep_positions_history[i + 1]["timestamp"] - lately_sleep_positions_history[i]["timestamp"]).total_seconds()
+                        else:
+                            count_position_1 += (lately_sleep_positions_history[i + 1]["timestamp"] - lately_sleep_positions_history[i]["timestamp"]).total_seconds()
+                    
+                    if lately_sleep_positions_history[-1]["positionType"] == 0:
+                        count_position_0 += (datetime.now(timezone.utc) - lately_sleep_positions_history[-1]["timestamp"]).total_seconds()
+                    else:
+                        count_position_1 += (datetime.now(timezone.utc) - lately_sleep_positions_history[-1]["timestamp"]).total_seconds()
+
+                if count_position_0 > count_position_1 * 2:
+                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm ngửa quá lâu. Vui lòng kiểm tra.")
+                elif count_position_1 > count_position_0 * 2:
+                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm nghiêng quá lâu. Vui lòng kiểm tra.")
+                
+                # delete all sleep positions by userId
+                babySleepPositionHistoryService.delete_all_sleep_positions_by_userId(code)
 
         return jsonify(result)
 
