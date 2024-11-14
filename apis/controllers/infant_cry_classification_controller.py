@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from datetime import datetime
 from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
+from services.infant_cry_classification_service import InfantCryClassificationService
 
 import os
 
@@ -12,6 +13,7 @@ if not os.path.exists(audio_folder):
 
 icc_bp = Blueprint("infant_cry_classification", __name__, url_prefix="/api/infant_cry_classification")
 babyCryAdultVoiceClassificationService = BabyCryAdultVoiceClassificationService()
+infantCryClassificationService = InfantCryClassificationService()
     
 @icc_bp.route("/predict", methods=["POST"])
 def predict_infant_cry():
@@ -27,6 +29,15 @@ def predict_infant_cry():
 
         # Call the model's prediction function
         result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file.filename))
+
+        if result == 1:
+            typ = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file.filename))
+            return jsonify(
+                {
+                    "result": str(result),
+                    "type": str(typ)
+                }
+            )
 
         return jsonify(
             {
