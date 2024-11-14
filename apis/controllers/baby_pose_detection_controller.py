@@ -55,7 +55,7 @@ def predict_baby_pose_detection():
             return jsonify({"message": "Image decoding failed"}), 400
         
         # Đặt tên file tạm dựa trên ID và timestamp để tránh trùng lặp
-        temp_image_name = f"{code}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        temp_image_name = f"{code}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
         cv2.imwrite(os.path.join(image_folder, temp_image_name), image)
 
         # Tải ảnh lên Firebase từ file tạm
@@ -75,7 +75,7 @@ def predict_baby_pose_detection():
             # Insert sleep position data into MongoDB
             babySleepPositionService.insert_sleep_position({
                 "userId": code,
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.now(),
                 "positionType": result["id"]
             })
 
