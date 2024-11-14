@@ -4,7 +4,8 @@ import numpy as np
 from datetime import datetime
 from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
 from services.infant_cry_classification_service import InfantCryClassificationService
-from services.firebase_helper import save_file_to_firestore, get_account_info_by_id, send_notification_to_device
+from services.firebase_helper import save_file_to_firestore, get_account_info_by_id
+from services.message_helper import send_notification_to_device
 from services.utils import most_frequent_element
 
 import os
@@ -45,6 +46,7 @@ def predict_infant_cry():
         result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file_name))
 
         if result == 1:
+            send_notification_to_device(account_info["deviceToken"], "Trẻ đang khóc", "Trẻ đang khóc")
             cry_classes = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
             if len(cry_classes) == 0:
                 return jsonify(
