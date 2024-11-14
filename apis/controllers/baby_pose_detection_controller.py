@@ -5,7 +5,8 @@ import numpy as np
 from services.baby_pose_detection_service import BabyPoseDetectionService
 from services.baby_sleep_position_service import BabySleepPositionService
 from services.baby_sleep_position_history_service import BabySleepPositionHistoryService
-from services.firebase_helper import get_account_info_by_id, send_notification_to_device, save_file_to_firestore
+from services.firebase_helper import get_account_info_by_id, save_file_to_firestore
+from services.message_helper import send_notification_to_device
 from datetime import datetime, timedelta, timezone
 
 bpd_bp = Blueprint("baby_pose_detection", __name__, url_prefix="/api/baby_pose_detection")
