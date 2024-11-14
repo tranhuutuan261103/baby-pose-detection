@@ -1,6 +1,6 @@
 import os
 import firebase_admin
-from firebase_admin import credentials, db, messaging
+from firebase_admin import credentials, db, messaging, storage
 
 # Get the absolute path of the current file (firebase_helper.py)
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -51,6 +51,46 @@ def get_account_info_by_id(account_id):
         else:
             print("Account not found")
             return None
+    except Exception as e:
+        print(f"Exception: {str(e)}")
+        return None
+    
+def save_file_to_firestore(file_path: str, file_name: str):
+    try:
+        # Reference to the storage bucket
+        bucket = storage.bucket(
+            name="pbl6-519c3.appspot.com",
+        )
+        
+        # Reference to the specific file in the storage bucket
+        blob = bucket.blob(file_name)
+        
+        # Upload the file to the storage bucket
+        blob.upload_from_filename(file_path)
+        
+        # Get the URL of the uploaded file
+        url = blob.public_url
+        
+        return url
+    except Exception as e:
+        print(f"Exception: {str(e)}")
+        return None
+
+def save_image_to_firestore(image_data: bytes, file_name: str):
+    try:
+        # Reference to the storage bucket
+        bucket = storage.bucket(name="pbl6-519c3.appspot.com")
+        
+        # Reference to the specific file in the storage bucket
+        blob = bucket.blob(file_name)
+        
+        # Upload the image data to the storage bucket
+        blob.upload_from_string(image_data, content_type="image/jpg")
+        
+        # Get the URL of the uploaded image
+        url = blob.public_url
+        
+        return url
     except Exception as e:
         print(f"Exception: {str(e)}")
         return None
