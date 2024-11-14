@@ -15,6 +15,10 @@ import json
 import requests
 import google.auth.transport.requests
 import os
+import logging
+# Configure the logger
+logging.basicConfig(filename='apis/server_logs.log', level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 from google.oauth2 import service_account
 
@@ -57,9 +61,11 @@ def _send_fcm_message(fcm_message):
     resp = requests.post(FCM_URL, data=json.dumps(fcm_message), headers=headers)
 
     if resp.status_code == 200:
+        logging.info(f'Message sent to Firebase for delivery, response: {resp.text}')
         print('Message sent to Firebase for delivery, response:')
         print(resp.text)
     else:
+        logging.error(f'Unable to send message to Firebase {resp.text}')
         print('Unable to send message to Firebase')
         print(resp.text)
 

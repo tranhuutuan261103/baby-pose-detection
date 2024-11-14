@@ -4,9 +4,13 @@ import numpy as np
 from datetime import datetime
 from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
 from services.infant_cry_classification_service import InfantCryClassificationService
-from services.firebase_helper import save_file_to_firestore, get_account_info_by_id
+from services.firebase_helper import save_file_to_firestore, get_account_info_by_id, save_log_to_firestore
 from services.message_helper import send_notification_to_device
 from services.utils import most_frequent_element
+import logging
+# Configure the logger
+logging.basicConfig(filename='apis/server_logs.log', level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 import os
 
@@ -46,6 +50,18 @@ def predict_infant_cry():
         result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file_name))
 
         if result == 1:
+            logging.info(f"Send notification to device {account_info['deviceToken']}")
+            save_log_to_firestore(
+                {
+                    "push_notification": 
+                        {
+                            "system_id": system_id,
+                            "audio_file_name": audio_file_name,
+                            "result": "Trẻ đang khóc",
+                            "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
+                }
+            )
             send_notification_to_device(account_info["deviceToken"], "Trẻ đang khóc", "Trẻ đang khóc")
             cry_classes = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
             if len(cry_classes) == 0:

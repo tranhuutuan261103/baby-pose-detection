@@ -6,6 +6,7 @@ apis/media
 client/data_test
 .env
 serviceAccountKey.json
+server_logs.log
 
 yolov8n.pt
 yolov8s.pt

@@ -14,6 +14,16 @@ firebase_admin.initialize_app(cred, {
 
 ref = db.reference('/')
 
+def save_log_to_firestore(log_data: dict):
+    try:
+        # Reference to the `logs` node
+        logs_ref = db.reference('logs')
+        
+        # Push the log data to the `logs` node
+        logs_ref.push(log_data)
+    except Exception as e:
+        print(f"Exception: {str(e)}")
+
 # Hàm lấy thông tin tài khoản dựa trên code
 def get_account_info_by_code(code):
     try:
