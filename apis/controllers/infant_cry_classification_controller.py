@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify, request
 import cv2
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
 from services.infant_cry_classification_service import InfantCryClassificationService
-from services.firebase_helper import save_file_to_firestore, get_account_info_by_id, save_log_to_firestore
+from services.firebase_helper import save_file_to_firestore, get_account_info_by_id, save_log_to_firestore, save_notification_to_firebase
 from services.message_helper import send_notification_to_device
 from services.utils import most_frequent_element
 import logging
@@ -50,13 +50,14 @@ def predict_infant_cry():
         result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file_name))
 
         if result == 0:
-            save_log_to_firestore("audio", audio_file_name, "Trẻ bình thường", system_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            save_log_to_firestore("audio", audio_file_name, "Trẻ bình thường", system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
         elif result == 1:
-            save_log_to_firestore("audio", audio_file_name, "Trẻ đang khóc", system_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            save_log_to_firestore("audio", audio_file_name, "Trẻ đang khóc", system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
 
         if result == 1:
             logging.info(f"Send notification to device {account_info['deviceToken']}")
             send_notification_to_device(account_info["deviceToken"], "Trẻ đang khóc", "Trẻ đang khóc")
+            save_notification_to_firebase("Trẻ đang khóc", system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
             cry_classes = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
             if len(cry_classes) == 0:
                 return jsonify(
