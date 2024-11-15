@@ -49,19 +49,13 @@ def predict_infant_cry():
         # Call the model's prediction function
         result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file_name))
 
+        if result == 0:
+            save_log_to_firestore("audio", audio_file_name, "Trẻ bình thường", system_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        elif result == 1:
+            save_log_to_firestore("audio", audio_file_name, "Trẻ đang khóc", system_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
         if result == 1:
             logging.info(f"Send notification to device {account_info['deviceToken']}")
-            save_log_to_firestore(
-                {
-                    "push_notification": 
-                        {
-                            "system_id": system_id,
-                            "audio_file_name": audio_file_name,
-                            "result": "Trẻ đang khóc",
-                            "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        }
-                }
-            )
             send_notification_to_device(account_info["deviceToken"], "Trẻ đang khóc", "Trẻ đang khóc")
             cry_classes = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
             if len(cry_classes) == 0:
