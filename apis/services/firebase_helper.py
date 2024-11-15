@@ -27,6 +27,18 @@ def save_log_to_firestore(type: str, file_name: str, result: str, account_id: st
     except Exception as e:
         print(f"Exception: {str(e)}")
 
+def save_notification_to_firebase(message: str, account_id: str, timestamp: str):
+    try:
+        # Reference to the `logs` node
+        notifications_ref = db.reference(f'notification/{account_id}')
+        
+        notifications_ref.push({
+            'content': message,
+            'createAt': timestamp
+        })
+    except Exception as e:
+        print(f"Exception: {str(e)}")
+
 # Hàm lấy thông tin tài khoản dựa trên code
 def get_account_info_by_code(code):
     try:
