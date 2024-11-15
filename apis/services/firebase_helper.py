@@ -59,7 +59,7 @@ def get_account_info_by_code(code):
         print(f"Exception: {str(e)}")
         return None
     
-def get_account_info_by_id(account_id):
+def get_account_infos_by_id(account_id):
     try:
         # Reference to the specific account using its ID
         account_ref = db.reference(f'accounts/{account_id}')
@@ -69,10 +69,10 @@ def get_account_info_by_id(account_id):
         
         # Check if account data is found
         if account_data:
+            account_data_list = []
             for key, value in account_data.items():
-                if value.get('code') == account_id:
-                    return value
-            return None
+                account_data_list.append(value)
+            return account_data_list
         else:
             print("Account not found")
             return None
