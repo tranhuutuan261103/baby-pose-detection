@@ -58,24 +58,34 @@ def predict_infant_cry():
             logging.info(f"Send notification to device {account_info['deviceToken']}")
             send_notification_to_device(account_info["deviceToken"], "Trẻ đang khóc", "Trẻ đang khóc")
             save_notification_to_firebase("Trẻ đang khóc", system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
-            cry_classes = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
-            if len(cry_classes) == 0:
+            cry_class = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
+            if cry_class == None:
                 return jsonify(
                     {
-                        "result": str(result),
-                        "type": "Không phát hiện tiếng khóc"
+                        "result": str(result)
                     }
                 )
             
-            cry_class = most_frequent_element(cry_classes)
             if account_info["enableNotification"] == True:
-                send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", f"{cry_class}")
-            return jsonify(
-                {
-                    "result": str(result),
-                    "type": str(cry_class)
-                }
-            )
+                class_name = "Trẻ đang khóc"
+                if cry_class == 0:
+                    class_name = "Trẻ cảm thấy đau bụng"
+                elif cry_class == 1:
+                    class_name = "Trẻ cảm thấy ợ hơi"
+                elif cry_class == 2:
+                    class_name = "Trẻ cảm thấy không thoải mái"
+                elif cry_class == 3:
+                    class_name = "Trẻ cảm thấy lo sợ"
+                elif cry_class == 4:
+                    class_name = "Trẻ cảm thấy mệt mỏi"
+                send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", f"{class_name}")
+                save_notification_to_firebase(class_name, system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+                return jsonify(
+                    {
+                        "result": str(result),
+                        "type": str(class_name)
+                    }
+                )
 
         return jsonify(
             {
