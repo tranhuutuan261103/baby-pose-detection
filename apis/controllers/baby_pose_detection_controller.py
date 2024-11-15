@@ -76,11 +76,11 @@ def predict_baby_pose_detection():
             # Insert sleep position data into MongoDB
             babySleepPositionService.insert_sleep_position({
                 "userId": code,
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(timezone.utc),
                 "positionType": result["id"]
             })
 
-            lately_sleep_positions = babySleepPositionHistoryService.get_all_sleep_positions(code)
+            lately_sleep_positions = babySleepPositionService.get_all_sleep_positions(code)
 
             is_changed = True
             if len(lately_sleep_positions) > 0:
@@ -113,13 +113,13 @@ def predict_baby_pose_detection():
                     else:
                         count_position_1 += (datetime.now(timezone.utc) - lately_sleep_positions_history[-1]["timestamp"]).total_seconds()
 
-                if count_position_0 > count_position_1 * 2:
-                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm ngửa quá lâu. Vui lòng kiểm tra.")
-                elif count_position_1 > count_position_0 * 2:
-                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm nghiêng quá lâu. Vui lòng kiểm tra.")
+                    if count_position_0 > count_position_1 * 2:
+                        send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm ngửa quá lâu. Vui lòng kiểm tra.")
+                    elif count_position_1 > count_position_0 * 2:
+                        send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm nghiêng quá lâu. Vui lòng kiểm tra.")
                 
-                # delete all sleep positions by userId
-                babySleepPositionHistoryService.delete_all_sleep_positions_by_userId(code)
+                    # delete all sleep positions by userId
+                    babySleepPositionHistoryService.delete_all_sleep_positions_by_userId(code)
 
         return jsonify(result)
 
