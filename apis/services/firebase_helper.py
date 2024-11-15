@@ -14,13 +14,16 @@ firebase_admin.initialize_app(cred, {
 
 ref = db.reference('/')
 
-def save_log_to_firestore(log_data: dict):
+def save_log_to_firestore(type: str, file_name: str, result: str, account_id: str, timestamp: str):
     try:
         # Reference to the `logs` node
-        logs_ref = db.reference('logs')
+        logs_ref = db.reference(f'logs/{account_id}/{type}')
         
-        # Push the log data to the `logs` node
-        logs_ref.push(log_data)
+        logs_ref.set({
+            'file_name': file_name,
+            'result': result,
+            'timestamp': timestamp
+        })
     except Exception as e:
         print(f"Exception: {str(e)}")
 

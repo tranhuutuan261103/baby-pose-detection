@@ -5,7 +5,7 @@ import numpy as np
 from services.baby_pose_detection_service import BabyPoseDetectionService
 from services.baby_sleep_position_service import BabySleepPositionService
 from services.baby_sleep_position_history_service import BabySleepPositionHistoryService
-from services.firebase_helper import get_account_info_by_id, save_file_to_firestore
+from services.firebase_helper import get_account_info_by_id, save_file_to_firestore, save_log_to_firestore
 from services.message_helper import send_notification_to_device
 from datetime import datetime, timedelta, timezone
 
@@ -66,6 +66,17 @@ def predict_baby_pose_detection():
 
         # Call the model's prediction function
         result = babyPoseDetectionService.predict(image)
+
+        # Save the log to Firestore
+        class_type = "Unknown"
+        if result["id"] == 0:
+            class_type = "Nằm ngửa"
+        elif result["id"] == 1:
+            class_type = "Nằm nghiêng"
+        elif result["id"] == 2:
+            class_type = "Nằm xấp"
+
+        save_log_to_firestore("image", temp_image_name, class_type, code, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
         if account_info["enableNotification"] == True and result["id"] == 2:
             # Send notification to user
