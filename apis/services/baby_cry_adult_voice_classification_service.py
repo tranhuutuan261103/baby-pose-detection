@@ -5,4 +5,4 @@ class BabyCryAdultVoiceClassificationService:
         self.babyCryAdultVoiceClassification = BabyCryAdultVoiceClassification()
     
     def predict(self, audio):
-        return self.babyCryAdultVoiceClassification.predict(audio)
+        return self.babyCryAdultVoiceClassification.detect_audio_class(audio)
