@@ -25,43 +25,28 @@ class BabyCryAdultVoiceClassification:
 
         return normalized_energy
     
-    def hps_f0(self, signal, sample_rate, min_freq=60, max_freq=800, N_FFT=2048):
-        # Áp dụng cửa sổ Hamming để làm mượt tín hiệu
-        windowed_signal = signal * np.hamming(len(signal))
-        
-        # Thực hiện FFT và chỉ lấy phổ biên độ
-        fft_N_points = np.fft.fft(windowed_signal, N_FFT)
-        spectrum = 2.0/N_FFT * np.abs(fft_N_points[:N_FFT//2])
-        frequencies_N_points = sample_rate * np.arange(N_FFT//2) / N_FFT
-        
-        # Giới hạn tần số trong khoảng quan tâm (80Hz - 400Hz)
-        valid_freqs = (frequencies_N_points >= min_freq) & (frequencies_N_points <= max_freq)
-        frequencies_N_points = frequencies_N_points[valid_freqs]
-        spectrum = spectrum[valid_freqs]
-        # Áp dụng HPS (Harmonic Product Spectrum)
-        hps_spectrum = np.copy(spectrum)
+    def autocorrelation(self, signal):
+        result = np.correlate(signal, signal, mode='full')
+        mid = len(result) // 2
+        return result[mid:]
 
-        # Nhân phổ với các bội số 2, 3, 4,...
-        for h in range(2, 4):
-            # Downsample bằng cách sử dụng phép nội suy để lấy phổ tương ứng
-            downsampled_spectrum = np.interp(
-                np.arange(0, len(spectrum), h),  # Các giá trị sau khi nội suy
-                np.arange(0, len(spectrum)),     # Các giá trị ban đầu
-                spectrum                        # Phổ gốc
-            )
-            
-            # Đảm bảo các phổ có cùng độ dài trước khi nhân
-            min_len = min(len(hps_spectrum), len(downsampled_spectrum))
-            hps_spectrum[:min_len] *= downsampled_spectrum[:min_len]
-            log_spectrum = np.log(np.abs(spectrum) + np.finfo(float).eps)  # Thêm epsilon để tránh log(0)
-            
-        # Tìm tần số có biên độ lớn nhất sau khi áp dụng HPS
-        peak_index = np.argmax(log_spectrum)
-        peak_freq = frequencies_N_points[peak_index]
-        return peak_freq
+    def find_f0(self, signal, sr, min_freq=50, max_freq=700):
+        ac = self.autocorrelation(signal)
+        # Xác định chỉ số của độ trễ (delay) tương ứng với tần số cơ bản
+        ac = ac[int(sr / max_freq):]
+        # Tìm chỉ số của độ trễ tối đa
+        peak = np.argmax(ac)
+        # Tính F0 từ chỉ số độ trễ
+        f0 = sr / (peak + int(sr / max_freq))
+        
+        # Nếu F0 nằm ngoài khoảng cho phép, trả về NaN
+        if f0 < min_freq or f0 > max_freq:
+            return 0
+        
+        return f0
     
     def detect_audio_class(self, file_path, frame_length_ms=30, frame_step_ms=15, sr=16000, 
-                       energy_threshold=0.001, f0_threshold=400) -> int:
+                       energy_threshold=0.005, f0_threshold=500):
 
         signal, sr = librosa.load(file_path, sr=sr)
 
@@ -79,20 +64,24 @@ class BabyCryAdultVoiceClassification:
             if energy < energy_threshold:
                 silence_count += 1
             else:
-                f0 = self.hps_f0(frame, sr) 
+                f0 = self.find_f0(frame, sr)
+                print(f0) 
                 if f0 > f0_threshold:
                     cry_count += 1
+                elif f0 == 0:
+                    continue
                 else:
                     voice_count += 1
 
-        # In thông tin phân loại
         print(f"Frames classified as Silence: {silence_count}")
         print(f"Frames classified as Voice: {voice_count}")
         print(f"Frames classified as Cry: {cry_count}")
 
-        # Quyết định lớp dựa trên số lượng khung
         if silence_count > max(voice_count, cry_count):
-            return 0
+            if voice_count > cry_count:
+                return 0
+            else:
+                return 1
         elif cry_count > voice_count:
             return 1
         else:
