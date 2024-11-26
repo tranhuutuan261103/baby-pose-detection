@@ -15,47 +15,59 @@ class BabyCryAdultVoiceClassification:
         self.n_bands=7 #we are extracting the 7 features out of the spectral contrast
         self.fmin=100 #minimum frequency
 
-    def normalize_audio_length(self, y, sr, target_duration=7):
-        target_length = int(sr * target_duration)
-        
-        if len(y) > target_length:
-            # Nếu tín hiệu dài hơn 7s, cắt bớt
-            y = y[:target_length]
-        elif len(y) < target_length:
-            # Nếu tín hiệu ngắn hơn 7s, thêm padding
-            padding = target_length - len(y)
-            y = np.pad(y, (0, padding), mode='constant')
-        
-        return y
+    def compute_normalized_energy(self, frames):
+        """Tính năng lượng chuẩn hóa của từng khung."""
+        energy = np.sum(frames**2, axis=1)
+        if np.max(energy) > 0:
+            normalized_energy = energy / np.max(energy)  # Chuẩn hóa nếu max > 0
+        else:
+            normalized_energy = energy  # Giữ nguyên nếu max = 0
+
+        return normalized_energy
     
-    # Hàm trích xuất đặc trưng
-    def extract_features(self, y, sr):    
-        mfcc = np.mean(librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40,n_fft=self.n_fft,hop_length=self.hop_length,win_length=self.win_length,window=self.window).T,axis=0)
-        mel = np.mean(librosa.feature.melspectrogram(y=y, sr=sr,n_fft=self.n_fft, hop_length=self.hop_length, win_length=self.win_length, window='hann',n_mels=self.n_mels).T,axis=0)
-        print(mel.shape)
-        stft = np.abs(librosa.stft(y))
-        chroma = np.mean(librosa.feature.chroma_stft(S=stft, y=y, sr=sr).T,axis=0)
-        contrast = np.mean(librosa.feature.spectral_contrast(S=stft, y=y, sr=sr,n_fft=self.n_fft,
-                                                        hop_length=self.hop_length, win_length=self.win_length,
-                                                        n_bands=self.n_bands, fmin=self.fmin).T,axis=0)
-        tonnetz =np.mean(librosa.feature.tonnetz(y=y, sr=sr).T,axis=0)
-        features = np.concatenate((mfcc, chroma, mel, contrast, tonnetz))
-        print(features.shape)
-        return features
+    def autocorrelation_f0(self, frame, fs, fmin=60, fmax=700):
+        """Tính F0 bằng phương pháp tự tương quan."""
+        corr = np.correlate(frame, frame, mode='full')[len(frame) - 1:]
+        corr[:int(fs / fmax)] = 0  # Loại bỏ tần số quá cao
+        peak_idx = np.argmax(corr)
+        peak_lag = peak_idx if corr[peak_idx] > 0 else 0
+        f0 = fs / peak_lag if peak_lag != 0 else 0
+        return f0
     
-    def predict(self, audio_path):
-        filepath = os.path.join("", audio_path)
-        y, sr = librosa.load(filepath, sr=16000)
+    def detect_audio_class(self, file_path, frame_length_ms=30, frame_step_ms=15, sr=16000, 
+                       energy_threshold=0.001, f0_threshold=400) -> int:
+
+        signal, sr = librosa.load(file_path, sr=sr)
+
+        frame_length = int(frame_length_ms * sr / 1000)
+        frame_step = int(frame_step_ms * sr / 1000)
+        frames = librosa.util.frame(signal, frame_length=frame_length, hop_length=frame_step).T
         
-        # Chuẩn hóa độ dài tín hiệu
-        y = self.normalize_audio_length(y, sr)
+        normalized_energy = self.compute_normalized_energy(frames)
 
-        # Trích xuất đặc trưng
-        features = self.extract_features(y, sr)
+        silence_count = 0
+        voice_count = 0
+        cry_count = 0
 
-        # Dự đoán
-        prediction = self.model.predict(features.reshape(1, -1))[0]
+        for frame, energy in zip(frames, normalized_energy):
+            if energy < energy_threshold:
+                silence_count += 1
+            else:
+                f0 = self.autocorrelation_f0(frame, sr) 
+                if f0 > f0_threshold:
+                    cry_count += 1
+                else:
+                    voice_count += 1
 
-        print(f"Prediction: {prediction}")
+        # In thông tin phân loại
+        print(f"Frames classified as Silence: {silence_count}")
+        print(f"Frames classified as Voice: {voice_count}")
+        print(f"Frames classified as Cry: {cry_count}")
 
-        return prediction
+        # Quyết định lớp dựa trên số lượng khung
+        if silence_count > max(voice_count, cry_count):
+            return 0
+        elif cry_count > voice_count:
+            return 1
+        else:
+            return 0
