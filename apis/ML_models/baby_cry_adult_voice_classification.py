@@ -25,28 +25,65 @@ class BabyCryAdultVoiceClassification:
 
         return normalized_energy
     
-    def autocorrelation(self, signal):
-        result = np.correlate(signal, signal, mode='full')
-        mid = len(result) // 2
-        return result[mid:]
+    def difference_function_fast(self, signal, max_lag):
+        """Tính hàm hiệu sai nhanh bằng NumPy."""
+        size = len(signal)
+        padded_signal = np.pad(signal, (0, max_lag), mode='constant', constant_values=0)
+        cumsum = np.cumsum(padded_signal**2)
+        diff = np.zeros(max_lag)
+        for tau in range(1, max_lag):
+            # Hiệu quả hơn bằng cách sử dụng cumsum và dot product
+            diff[tau] = cumsum[size] - cumsum[tau] - 2 * np.dot(signal[:size-tau], signal[tau:size])
+        return diff
 
-    def find_f0(self, signal, sr, min_freq=50, max_freq=700):
-        ac = self.autocorrelation(signal)
-        # Xác định chỉ số của độ trễ (delay) tương ứng với tần số cơ bản
-        ac = ac[int(sr / max_freq):]
-        # Tìm chỉ số của độ trễ tối đa
-        peak = np.argmax(ac)
-        # Tính F0 từ chỉ số độ trễ
-        f0 = sr / (peak + int(sr / max_freq))
-        
-        # Nếu F0 nằm ngoài khoảng cho phép, trả về NaN
+    def cumulative_mean_normalized_difference_fast(self, diff):
+        """Chuẩn hóa hàm hiệu sai tích lũy (phiên bản nhanh)."""
+        cmndf = np.zeros_like(diff)
+        cmndf[0] = 1  # Không sử dụng tau = 0
+        running_sum = 0
+        for tau in range(1, len(diff)):
+            running_sum += diff[tau]
+            cmndf[tau] = diff[tau] / (running_sum / tau) if running_sum > 0 else 1
+        return cmndf
+
+    def find_f0_yin(self, signal, sr, min_freq=50, max_freq=700, threshold=0.1):
+        """Tính F0 bằng phương pháp YIN (tối ưu)."""
+        # Tính độ trễ tối đa và tối thiểu
+        max_lag = int(sr / min_freq)
+        min_lag = int(sr / max_freq)
+
+        # Tính hàm hiệu sai nhanh
+        diff = self.difference_function_fast(signal, max_lag)
+
+        # Chuẩn hóa hàm hiệu sai
+        cmndf = self.cumulative_mean_normalized_difference_fast(diff)
+
+        # Tìm độ trễ (tau) đầu tiên vượt qua ngưỡng
+        tau = self.absolute_threshold(cmndf[min_lag:], threshold)
+        tau += min_lag  # Bù chỉ số vì cmndf bị cắt
+
+        # Nếu không tìm được độ trễ hợp lệ
+        if tau == 0:
+            return 0
+
+        # Tính F0 từ độ trễ
+        f0 = sr / tau
+
+        # Nếu F0 nằm ngoài khoảng cho phép, trả về 0
         if f0 < min_freq or f0 > max_freq:
             return 0
-        
+
         return f0
+
+    # Hàm tìm ngưỡng không đổi (giữ nguyên)
+    def absolute_threshold(self, cmndf, threshold):
+        for tau in range(1, len(cmndf)):
+            if cmndf[tau] < threshold:
+                return tau
+        return 0
     
     def detect_audio_class(self, file_path, frame_length_ms=30, frame_step_ms=15, sr=16000, 
-                       energy_threshold=0.005, f0_threshold=500):
+                       energy_threshold=0.005, f0_threshold=400):
 
         signal, sr = librosa.load(file_path, sr=sr)
 
@@ -64,8 +101,7 @@ class BabyCryAdultVoiceClassification:
             if energy < energy_threshold:
                 silence_count += 1
             else:
-                f0 = self.find_f0(frame, sr)
-                print(f0) 
+                f0 = self.find_f0_yin(frame, sr)
                 if f0 > f0_threshold:
                     cry_count += 1
                 elif f0 == 0:
