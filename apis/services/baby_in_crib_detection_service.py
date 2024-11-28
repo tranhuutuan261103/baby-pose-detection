@@ -22,5 +22,6 @@ class BabyInCribDetectionService:
                 }
         except Exception as e:
             return {
+                "id": -1,
                 "message": str(e),
             }
