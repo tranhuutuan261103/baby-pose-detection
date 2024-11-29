@@ -57,7 +57,7 @@ def predict_baby_in_crib_detection():
         if result["id"] == 0:
             save_log_to_firestore("image_crib", image_url, "Baby is not in crib", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
         elif result["id"] == 1:
-            save_log_to_firestore("image_crib", image_url, "Baby is in crib", image_url)
+            save_log_to_firestore("image_crib", image_url, "Baby is in crib", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
         else:
             save_log_to_firestore("image_crib", image_url, f"Error {result['message']}", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
 
