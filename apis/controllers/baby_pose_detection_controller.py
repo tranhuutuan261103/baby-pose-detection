@@ -2,11 +2,11 @@ from flask import Blueprint, jsonify, request
 import cv2
 import os
 import numpy as np
-from services.baby_pose_detection_service import BabyPoseDetectionService
+from services.AI.baby_pose_detection_service import BabyPoseDetectionService
 from services.baby_sleep_position_service import BabySleepPositionService
 from services.baby_sleep_position_history_service import BabySleepPositionHistoryService
 from services.firebase_helper import get_account_infos_by_id, save_file_to_firestore, data_observer, save_log_to_firestore, save_notification_to_firebase
-from services.message_helper import send_notification_to_device
+from services.notification_service import send_notification_to_user
 from datetime import datetime, timedelta, timezone
 
 bpd_bp = Blueprint("baby_pose_detection", __name__, url_prefix="/api/baby_pose_detection")
@@ -84,8 +84,7 @@ def predict_baby_pose_detection():
             for account_info in account_infos:
                 if account_info["enableNotification"] == True:
                     print("Sending notification to user...")
-                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Đã phát hiện trẻ em đang nằm xấp. Vui lòng kiểm tra.")
-                    save_notification_to_firebase("Đã phát hiện trẻ em đang nằm xấp. Vui lòng kiểm tra.", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+                    send_notification_to_user(account_info, "Cảnh báo tư thế ngủ", "Đã phát hiện trẻ em đang nằm xấp. Vui lòng kiểm tra.")
                     babySleepPositionHistoryService.delete_all_sleep_positions_by_userId(code)
             
         if result["id"] == 0 or result["id"] == 1:
@@ -131,12 +130,10 @@ def predict_baby_pose_detection():
 
                     if count_position_0 > count_position_1 * 2:
                         for account_info in account_infos:
-                            send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm ngửa quá lâu. Vui lòng kiểm tra.")
-                            save_notification_to_firebase("Trẻ em của bạn đã nằm ngửa quá lâu. Vui lòng kiểm tra.", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+                            send_notification_to_user(account_info, "Cảnh báo tư thế ngủ", "Trẻ em của bạn đã nằm ngửa quá lâu. Vui lòng kiểm tra.")
                     elif count_position_1 > count_position_0 * 2:
                         for account_info in account_infos:
-                            send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", "Trẻ em của bạn đã nằm nghiêng quá lâu. Vui lòng kiểm tra.")
-                            save_notification_to_firebase("Trẻ em của bạn đã nằm nghiêng quá lâu. Vui lòng kiểm tra.", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+                            send_notification_to_user(account_info, "Cảnh báo tư thế ngủ", "Trẻ em của bạn đã nằm nghiêng quá lâu. Vui lòng kiểm tra.")
                 
                     # delete all sleep positions by userId
                     babySleepPositionHistoryService.delete_all_sleep_positions_by_userId(code)

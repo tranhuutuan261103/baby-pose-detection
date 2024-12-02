@@ -111,25 +111,6 @@ def data_observer(url: str, state: bool):
     except Exception as e:
         print(f"Exception: {str(e)}")
 
-def save_image_to_firestore(image_data: bytes, file_name: str):
-    try:
-        # Reference to the storage bucket
-        bucket = storage.bucket(name="pbl6-519c3.appspot.com")
-        
-        # Reference to the specific file in the storage bucket
-        blob = bucket.blob(file_name)
-        
-        # Upload the image data to the storage bucket
-        blob.upload_from_string(image_data, content_type="image/jpg")
-        
-        # Get the URL of the uploaded image
-        url = blob.public_url
-        
-        return url
-    except Exception as e:
-        print(f"Exception: {str(e)}")
-        return None
-
 # Hàm gửi thông báo FCM
 def send_notification_to_device(device_token, title, body):
     # Tạo nội dung thông báo

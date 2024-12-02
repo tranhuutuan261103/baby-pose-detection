@@ -1,13 +1,12 @@
-from flask import Blueprint, jsonify, request
-import cv2
-import numpy as np
-from datetime import datetime, timezone, timedelta
-from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
-from services.infant_cry_classification_service import InfantCryClassificationService
-from services.firebase_helper import save_file_to_firestore, get_account_infos_by_id, data_observer, save_log_to_firestore, save_notification_to_firebase
-from services.message_helper import send_notification_to_device
-from services.utils import most_frequent_element
 import logging
+
+from flask import Blueprint, jsonify, request
+from datetime import datetime, timezone, timedelta
+from services.AI.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
+from services.AI.infant_cry_classification_service import InfantCryClassificationService
+from services.firebase_helper import save_file_to_firestore, get_account_infos_by_id, data_observer, save_log_to_firestore, save_notification_to_firebase
+from services.notification_service import send_notification_to_user
+
 # Configure the logger
 logging.basicConfig(filename='apis/server_logs.log', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -58,39 +57,37 @@ def predict_infant_cry():
         if result == 1:
             for account_info in account_infos:
                 logging.info(f"Send notification to device {account_info['deviceToken']}")
-                send_notification_to_device(account_info["deviceToken"], "Trẻ đang khóc", "Trẻ đang khóc")
-                save_notification_to_firebase("Trẻ đang khóc", system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+                send_notification_to_user(account_info, "Trẻ đang khóc", "Phát hiện trẻ đang khóc")
             
-            cry_class = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
-            if cry_class == None:
-                return jsonify(
-                    {
-                        "result": str(result)
-                    }
-                )
+            # cry_class = infantCryClassificationService.predict(os.path.join(audio_folder, audio_file_name))
+            # if cry_class == None:
+            #     return jsonify(
+            #         {
+            #             "result": str(result)
+            #         }
+            #     )
             
-            if account_infos[0]["enableNotification"] == True:
-                class_name = "Trẻ đang khóc"
-                if cry_class == 0:
-                    class_name = "Trẻ cảm thấy đau bụng"
-                elif cry_class == 1:
-                    class_name = "Trẻ cảm thấy ợ hơi"
-                elif cry_class == 2:
-                    class_name = "Trẻ cảm thấy không thoải mái"
-                elif cry_class == 3:
-                    class_name = "Trẻ cảm thấy lo sợ"
-                elif cry_class == 4:
-                    class_name = "Trẻ cảm thấy mệt mỏi"
+            # if account_infos[0]["enableNotification"] == True:
+            #     class_name = "Trẻ đang khóc"
+            #     if cry_class == 0:
+            #         class_name = "Trẻ cảm thấy đau bụng"
+            #     elif cry_class == 1:
+            #         class_name = "Trẻ cảm thấy ợ hơi"
+            #     elif cry_class == 2:
+            #         class_name = "Trẻ cảm thấy không thoải mái"
+            #     elif cry_class == 3:
+            #         class_name = "Trẻ cảm thấy lo sợ"
+            #     elif cry_class == 4:
+            #         class_name = "Trẻ cảm thấy mệt mỏi"
                 
-                for account_info in account_infos:
-                    send_notification_to_device(account_info["deviceToken"], "Thông báo từ hệ thống", f"{class_name}")
-                    save_notification_to_firebase(class_name, system_id, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
-                return jsonify(
-                    {
-                        "result": str(result),
-                        "type": str(class_name)
-                    }
-                )
+            #     for account_info in account_infos:
+            #         send_notification_to_user(account_info, "Trẻ đang khóc", class_name)
+            #     return jsonify(
+            #         {
+            #             "result": str(result),
+            #             "type": str(class_name)
+            #         }
+            #     )
 
         return jsonify(
             {
