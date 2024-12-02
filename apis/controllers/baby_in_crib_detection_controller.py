@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 import numpy as np
 
 from services.baby_in_crib_detection_service import BabyInCribDetectionService
-from services.firebase_helper import get_account_infos_by_id, save_file_to_firestore, save_log_to_firestore, send_notification_to_device, save_notification_to_firebase
+from services.firebase_helper import get_account_infos_by_id, save_file_to_firestore, data_observer, save_log_to_firestore, send_notification_to_device, save_notification_to_firebase
 
 bicd_bp = Blueprint("baby_in_crib_detection", __name__, url_prefix="/api/baby_in_crib_detection")
 
@@ -50,6 +50,7 @@ def predict_baby_in_crib_detection():
         image_url = save_file_to_firestore(os.path.join(image_folder, temp_image_name), f"{code}_image_crib.jpg")
         if image_url is None:
             print("Error saving image to Firestore")
+        data_observer(f"data_observer/{code}/is_updated_image", True)
 
         # Predict
         result = babyInCribDetectionService.predict(image)

@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime, timezone, timedelta
 from services.baby_cry_adult_voice_classification_service import BabyCryAdultVoiceClassificationService
 from services.infant_cry_classification_service import InfantCryClassificationService
-from services.firebase_helper import save_file_to_firestore, get_account_infos_by_id, save_log_to_firestore, save_notification_to_firebase
+from services.firebase_helper import save_file_to_firestore, get_account_infos_by_id, data_observer, save_log_to_firestore, save_notification_to_firebase
 from services.message_helper import send_notification_to_device
 from services.utils import most_frequent_element
 import logging
@@ -45,6 +45,7 @@ def predict_infant_cry():
         audio_file_name = f"{system_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.wav"
         audio_file.save(os.path.join(audio_folder, audio_file_name))
         save_file_to_firestore(os.path.join(audio_folder, audio_file_name), f"{system_id}_audio.wav")
+        data_observer(f"data_observer/{system_id}/is_updated_audio", True)
 
         # Call the model's prediction function
         result = babyCryAdultVoiceClassificationService.predict(os.path.join(audio_folder, audio_file_name))

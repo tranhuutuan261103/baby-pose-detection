@@ -100,6 +100,16 @@ def save_file_to_firestore(file_path: str, file_name: str):
     except Exception as e:
         print(f"Exception: {str(e)}")
         return None
+    
+def data_observer(url: str, state: bool):
+    try:
+        # Reference to the `data` node
+        data_ref = db.reference(url)
+        
+        # Set the data
+        data_ref.set(state)
+    except Exception as e:
+        print(f"Exception: {str(e)}")
 
 def save_image_to_firestore(image_data: bytes, file_name: str):
     try:

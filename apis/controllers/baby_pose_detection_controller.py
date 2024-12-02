@@ -5,7 +5,7 @@ import numpy as np
 from services.baby_pose_detection_service import BabyPoseDetectionService
 from services.baby_sleep_position_service import BabySleepPositionService
 from services.baby_sleep_position_history_service import BabySleepPositionHistoryService
-from services.firebase_helper import get_account_infos_by_id, save_file_to_firestore, save_log_to_firestore, save_notification_to_firebase
+from services.firebase_helper import get_account_infos_by_id, save_file_to_firestore, data_observer, save_log_to_firestore, save_notification_to_firebase
 from services.message_helper import send_notification_to_device
 from datetime import datetime, timedelta, timezone
 
@@ -63,6 +63,7 @@ def predict_baby_pose_detection():
         image_url = save_file_to_firestore(os.path.join(image_folder, temp_image_name), f"{code}_image.jpg")
         if image_url is None:
             print("Error saving image to Firestore")
+        data_observer(f"data_observer/{code}/is_updated_image", True)
 
         # Call the model's prediction function
         result = babyPoseDetectionService.predict(image)
