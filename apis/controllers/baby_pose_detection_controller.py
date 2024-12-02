@@ -68,16 +68,7 @@ def predict_baby_pose_detection():
         # Call the model's prediction function
         result = babyPoseDetectionService.predict(image)
 
-        # Save the log to Firestore
-        class_type = "Unknown"
-        if result["id"] == 0:
-            class_type = "Nằm ngửa"
-        elif result["id"] == 1:
-            class_type = "Nằm nghiêng"
-        elif result["id"] == 2:
-            class_type = "Nằm xấp"
-
-        save_log_to_firestore("image", temp_image_name, class_type, code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+        save_log_to_firestore("image", temp_image_name, result["message"], code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
 
         if result["id"] == 2:
             # Send notification to user
@@ -113,7 +104,7 @@ def predict_baby_pose_detection():
         if account_infos[0]["enableNotification"] == True:
             lately_sleep_positions_history = babySleepPositionHistoryService.get_all_sleep_positions(code)
             if len(lately_sleep_positions_history) > 0:
-                if lately_sleep_positions_history[0]["timestamp"] <= datetime.now(timezone.utc) - timedelta(minutes=account_info["schedule"]):
+                if lately_sleep_positions_history[0]["timestamp"] <= datetime.now(timezone.utc) - timedelta(minutes=account_infos[0]["schedule"]):
                     # Calculate the time positionType = 0 and 1 in the last 30 minutes
                     count_position_0 = 0 #s
                     count_position_1 = 0 #s

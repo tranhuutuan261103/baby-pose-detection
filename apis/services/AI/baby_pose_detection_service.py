@@ -29,5 +29,6 @@ class BabyPoseDetectionService:
         except Exception as e:
             return {
                 "id": 3,
-                "message": str(e),
+                "message": f"Error {str(e)}",
+                "message_vn": f"Error {str(e)}"
             }
