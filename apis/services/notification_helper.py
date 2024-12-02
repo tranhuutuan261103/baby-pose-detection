@@ -83,7 +83,7 @@ def _build_device_message(token, title: str, body: str):
         }
     }
 
-def send_notification_to_device(token, title: str, body: str):
+def send_notification(token, title: str, body: str):
     # Sử dụng DEVICE_TOKEN đã định nghĩa sẵn để gửi thông báo
     device_message = _build_device_message(token, title, body)
     print('FCM request body for sending message to specific device:')
