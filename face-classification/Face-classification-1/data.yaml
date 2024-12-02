@@ -1,0 +1,13 @@
+names:
+- face-downs
+- not-face-downs
+nc: 2
+roboflow:
+  license: CC BY 4.0
+  project: face-classification-keusz
+  url: https://universe.roboflow.com/learning-ai-kyix0/face-classification-keusz/dataset/1
+  version: 1
+  workspace: learning-ai-kyix0
+test: ../test/images
+train: ../train/images
+val: ../valid/images
