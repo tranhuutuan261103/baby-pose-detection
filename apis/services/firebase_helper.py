@@ -105,9 +105,11 @@ def data_observer(url: str, state: bool):
     try:
         # Reference to the `data` node
         data_ref = db.reference(url)
+
+        current_state = data_ref.get()
         
         # Set the data
-        data_ref.set(state)
+        data_ref.set(not current_state)
     except Exception as e:
         print(f"Exception: {str(e)}")
 
