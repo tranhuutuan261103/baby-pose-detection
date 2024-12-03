@@ -8,7 +8,13 @@ class BabyPoseDetectionService:
     def predict(self, image) -> dict:
         try:
             result = self.model.predict(image)
-            if result == 0:
+            if result == -1:
+                return {
+                    "id": -1,
+                    "message": "Cannot detect baby",
+                    "message_vn": "Không thể nhận diện được tư thế trẻ"
+                }
+            elif result == 0:
                 return {
                     "id": 0,
                     "message": "Baby is lying on",
