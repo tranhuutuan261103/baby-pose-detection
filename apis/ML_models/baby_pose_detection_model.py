@@ -91,7 +91,7 @@ class BabyPoseDetectionModel:
 
         return df_key_points
     
-    def predict(self, image, prediction_probability_threshold=0.5) -> int:
+    def predict(self, image, prediction_probability_threshold=0.7) -> int:
         with self.mp_pose.Pose(
             static_image_mode=True, model_complexity=1, smooth_landmarks=True
         ) as pose:
@@ -123,6 +123,10 @@ class BabyPoseDetectionModel:
 
                 # Dự đoán
                 predicted_class = self.model.predict(X)[0]  # Dự đoán dựa trên mô hình và input đã được scale
+                prediction_probability_max = self.model.predict_proba(X)[0].max()
+
+                if prediction_probability_max < prediction_probability_threshold:
+                    return -1
 
                 return int(predicted_class)
             except Exception as e:
