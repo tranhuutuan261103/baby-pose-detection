@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, request
-import cv2
 import os
-from datetime import datetime, timezone, timedelta
+import cv2
 import numpy as np
+from datetime import datetime, timezone, timedelta
 
+# Import services
 from services.AI.baby_in_crib_detection_service import BabyInCribDetectionService
 from services.firebase_helper import get_account_infos_by_id, save_file_to_firestore, data_observer, save_log_to_firestore, send_notification_to_device, save_notification_to_firebase
 
@@ -13,7 +14,20 @@ image_folder = "apis/media/crib_images/"
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
 
+video_folder = "apis/media/videos/"
+if not os.path.exists(video_folder):
+    os.makedirs(video_folder)
+
 babyInCribDetectionService = BabyInCribDetectionService()
+
+def stop_recording_event(user_id="test_user"):
+    try:
+        # Import socketio locally to avoid circular import
+        from main import socketio
+        
+        socketio.emit('stop_recording', {"user_id": user_id})
+    except Exception as e:
+        print(f"Error emitting tests event: {e}")
 
 @bicd_bp.route("/predict", methods=["POST"])
 def predict_baby_in_crib_detection():
@@ -42,11 +56,11 @@ def predict_baby_in_crib_detection():
         if image is None:
             return jsonify({"message": "Image decoding failed"}), 400
         
-        # Đặt tên file tạm dựa trên ID và timestamp để tránh trùng lặp
+        # Save temporary image with unique name
         temp_image_name = f"{code}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
         cv2.imwrite(os.path.join(image_folder, temp_image_name), image)
 
-        # Tải ảnh lên Firebase từ file tạm
+        # Upload image to Firebase
         image_url = save_file_to_firestore(os.path.join(image_folder, temp_image_name), f"{code}_image_crib.jpg")
         if image_url is None:
             print("Error saving image to Firestore")
@@ -55,8 +69,17 @@ def predict_baby_in_crib_detection():
         # Predict
         result = babyInCribDetectionService.predict(image)
 
+        stop_recording_event(code)
+
         if result["id"] == 0:
             save_log_to_firestore("image_crib", image_url, "Baby is not in crib", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+            try:
+                video_url = save_file_to_firestore(os.path.join(video_folder, f"{code}_video.avi"), f"{code}_video.avi")
+                if video_url is None:
+                    print("Error saving video to Firestore")
+                save_log_to_firestore("video_crib", video_url, f"Error {result['message']}", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
+            except Exception as e:
+                print(f"Error saving video to Firestore: {e}")
         elif result["id"] == 1:
             save_log_to_firestore("image_crib", image_url, "Baby is in crib", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
         else:
