@@ -74,7 +74,7 @@ def predict_baby_in_crib_detection():
         if result["id"] == 0:
             save_log_to_firestore("image_crib", image_url, "Baby is not in crib", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
             try:
-                video_url = save_file_to_firestore(os.path.join(video_folder, f"{code}_video.avi"), f"{code}_video.avi")
+                video_url = save_file_to_firestore(os.path.join(video_folder, f"{code}_video.mp4"), f"{code}_video.mp4")
                 if video_url is None:
                     print("Error saving video to Firestore")
                 save_log_to_firestore("video_crib", video_url, f"Error {result['message']}", code, (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%dT%H:%M:%S.000'))
